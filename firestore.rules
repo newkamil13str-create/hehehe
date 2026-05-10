@@ -1,0 +1,47 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuth() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isOwner(uid) {
+      return isAuth() && request.auth.uid == uid;
+    }
+
+    // ── Users ──────────────────────────────────────────────
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow create: if isOwner(uid);
+      // Users can update own doc but NOT balance (balance is server-only)
+      allow update: if isAdmin() ||
+        (isOwner(uid) &&
+         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['balance', 'role']));
+    }
+
+    // ── Orders ─────────────────────────────────────────────
+    match /orders/{orderId} {
+      allow read: if isOwner(resource.data.uid) || isAdmin();
+      // Write only via server-side (Firebase Admin SDK)
+      allow write: if false;
+    }
+
+    // ── Deposits ───────────────────────────────────────────
+    match /deposits/{depositId} {
+      allow read: if isOwner(resource.data.uid) || isAdmin();
+      allow write: if false;
+    }
+
+    // ── Settings ───────────────────────────────────────────
+    match /settings/{docId} {
+      allow read: if isAuth();
+      allow write: if isAdmin();
+    }
+  }
+}

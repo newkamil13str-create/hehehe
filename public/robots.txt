@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /order
+Disallow: /deposit
+Disallow: /history
+Disallow: /profile
+Disallow: /admin
+Disallow: /api/
+
+Sitemap: https://kamilshop.my.id/sitemap.xml
